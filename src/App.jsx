@@ -128,6 +128,13 @@ function processDay(grid) {
     earned += amt;
     msgs.push(`🪤 Bird trap fired! +${amt}g${hasNS(g,r,c,"trapdoubler")?" (Trap Doubler!)":""}`);
   }
+  //5. Reset daily harvest structures
+  for (let r=0; r<G; r++) for (let c=0; c<G; c++) {
+    const s = g[r][c].structure;
+    if (s?.type === "tea") {
+      s.harvestedToday = false;
+    }
+  }
 
   return { grid:g, earned, msgs };
 }
@@ -173,8 +180,10 @@ function cellVis(cell, r, c, grid) {
 
     if (s.type === "tea") {
       const wet = hasNS(grid,r,c,"water");
-      sub = wet ? "ready" : "dry!";
-      sc  = wet ? "#10b981" : "#f87171";
+      const used = s.harvestedToday;
+
+      sub = !wet ? "dry!" : used ? "done" : "ready";
+      sc  = !wet ? "#f87171" : used ? "#6b7280" : "#10b981";
     }
 
     return {
@@ -264,10 +273,26 @@ export default function FarmGame() {
       }
       // Tea
       if (cell.structure?.type === "tea") {
-        if (!hasNS(grid,r,c,"water")) { log("🍵 Tea needs a Water Tower nearby!"); return; }
+        if (!hasNS(grid,r,c,"water")) {
+          log("🍵 Tea needs a Water Tower nearby!");
+          return;
+        }
+
+        if (cell.structure.harvestedToday) {
+          log("🍵 Already harvested today.");
+          return;
+        }
+
         const keg  = hasNS(grid,r,c,"keg");
         const gain = 350 * (keg ? 2 : 1);
-        setGold(p=>p+gain); setAP(p=>p-1);
+
+        const ng = deepClone(grid);
+        ng[r][c].structure.harvestedToday = true;
+
+        setGrid(ng);
+        setGold(p=>p+gain);
+        setAP(p=>p-1);
+
         log(`🍵 Tea Leaves → +${gain}g${keg?" 🪣×2":""}`);
         return;
       }
@@ -393,7 +418,11 @@ export default function FarmGame() {
         if (cell.crop)      { log("❌ Remove crop first."); return; }
         const stype = reward.value;
         const ng = deepClone(grid);
-        ng[r][c].structure = { type:stype, ...(stype==="actionflower" ? {bloomLeft:4} : {}) };
+        ng[r][c].structure = {
+          type: stype,
+          ...(stype==="actionflower" ? {bloomLeft:4} : {}),
+          ...(stype==="tea" ? { harvestedToday:false } : {})
+        };
         setGrid(ng); setRewUsed(true); setMode("build");
         log(`🎁 Placed free ${STRUCTS[stype]?.icon} ${STRUCTS[stype]?.label}!`);
       }
