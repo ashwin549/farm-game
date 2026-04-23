@@ -67,13 +67,13 @@ function initGrid() {
 
 // ── Daily Reward Pool ─────────────────────────────────────────────────────────
 const POOL = [
+  {type:"structure", value:"rock"},{type:"structure", value:"bigtree"},
   {type:"structure",value:"water"}, {type:"structure",value:"growth"},
   {type:"structure",value:"beehive"}, {type:"structure",value:"tree"},
   {type:"structure",value:"tea"}, {type:"structure",value:"trap"},
   {type:"structure",value:"actionflower"}, {type:"structure",value:"plantdoubler"},
   {type:"structure",value:"trapdoubler"},
   {type:"farmland"}, {type:"farmland"},
-  {type:"gold",value:150}, {type:"gold",value:200},
 ];
 const randReward = () => POOL[Math.floor(Math.random()*POOL.length)];
 
@@ -214,6 +214,7 @@ export default function FarmGame() {
   const [crop,    setCrop]    = useState("mint");
   const [build,   setBuild]   = useState("water");
   const [reward,  setReward]  = useState(null);
+  const [rewardOptions, setRewardOptions] = useState(null);
   const [rewUsed, setRewUsed] = useState(false);
   const [msgs,    setMsgs]    = useState(["🌿 Welcome! Till land → Plant seeds → Water → Harvest. Press Next Day to advance."]);
   const [hovered, setHovered] = useState(null);
@@ -408,20 +409,19 @@ export default function FarmGame() {
     const newDay  = day + 1;
 
     // Roll reward; auto-claim gold rewards
-    let rew = randReward();
-    let extraGold = 0;
-    if (rew.type === "gold") { extraGold = rew.value; rew = null; }
-
-    const finalGold = newGold + extraGold;
+    const options = Array.from({ length: 3 }, () => randReward());
+    //the finalgold is diff in case we want to add a gold reward that is auto-claimed later
+    const finalGold = newGold;
 
     setGrid(ng);
     setGold(finalGold);
     setAP(MAX_AP);
     setDay(newDay);
-    setReward(rew);
+    setRewardOptions(options);
+    setReward(null);
     setRewUsed(false);
     setMsgs(prev => [
-      `🌅 Day ${newDay} — passive income +${earned}g${extraGold?`, reward +${extraGold}g`:""}`,
+      `🌅 Day ${newDay} — passive income +${earned}g`,
       ...dm,
       ...prev,
     ].slice(0,12));
@@ -548,7 +548,7 @@ export default function FarmGame() {
           }}>{m.label}</button>
         ))}
         {/* Reward mode button — only when reward exists */}
-        {reward && !rewUsed && (
+        {rewardOptions && !rewUsed && (
           <button onClick={()=>setMode("reward")} style={{
             background:mode==="reward"?"#7c2d1288":"#1c1917",
             border:`1.5px solid #f97316`,
@@ -609,22 +609,40 @@ export default function FarmGame() {
       )}
 
       {/* ── Daily Reward Banner ── */}
-      {reward && !rewUsed && (
-        <div style={{textAlign:"center",marginBottom:6}}>
-          <span style={{
-            display:"inline-block",background:"#3b1c08",border:"1px solid #f97316",
-            borderRadius:6,padding:"4px 14px",fontSize:11,color:"#fed7aa",
-          }}>
-            🎁 Daily Reward:{" "}
-            <strong>
-              {reward.type==="farmland"
-                ? "Farmland Plot 🟫"
-                : `${STRUCTS[reward.value]?.icon} ${STRUCTS[reward.value]?.label}`}
-            </strong>
-            {" "}— click <em>Reward</em> mode then place it on the grid (free!)
-          </span>
-        </div>
-      )}
+      {rewardOptions && !rewUsed && (
+        <div style={{textAlign:"center",marginBottom:8}}>
+          <div style={{marginBottom:6,fontSize:11,color:"#fbbf24"}}>
+            🎁 Choose ONE reward:
+          </div>
+
+        <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+          {rewardOptions.map((r, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setReward(r);
+                      setRewardOptions(null);
+                      setMode("reward");
+                    }}
+                    style={{
+                      background:"#1c1917",
+                      border:"1px solid #44403c",
+                      borderRadius:8,
+                      padding:"8px 14px",
+                      cursor:"pointer",
+                      color:"#fef3c7",
+                      fontFamily:"inherit",
+                      fontSize:11,
+                    }}
+                  >
+                    {r.type === "farmland"
+                      ? "🟫 Farmland"
+                      : `${STRUCTS[r.value]?.icon} ${STRUCTS[r.value]?.label}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+        )}
 
       {/* ── Grid ── */}
       <div style={{display:"flex",justifyContent:"center",marginBottom:6}}>
