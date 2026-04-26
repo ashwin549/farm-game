@@ -5,7 +5,6 @@ const G       = 10;
 const MAX_AP  = 11;
 const START_G = 200;
 const GOAL    = 5000;
-const MAX_DAY = 30;
 const CS      = 50; // cell px
 
 // ── Crop & Structure Data ─────────────────────────────────────────────────────
@@ -226,6 +225,7 @@ export default function FarmGame() {
   const [day,           setDay]          = useState(1);
   const [wood,          setWood]         = useState(0);
   const [rock,          setRock]         = useState(0);
+  const [goal,          setGoal]         = useState(GOAL);
   const [mode,          setMode]         = useState("till");
   const [crop,          setCrop]         = useState("mint");
   const [build,         setBuild]        = useState("water");
@@ -234,13 +234,11 @@ export default function FarmGame() {
   const [rewUsed,       setRewUsed]      = useState(false);
   const [msgs,          setMsgs]         = useState(["🌿 Welcome! Till land → Plant seeds → Water → Harvest. Press Next Day to advance."]);
   const [hovered,       setHovered]      = useState(null);
-  const [status,        setStatus]       = useState("playing"); // playing | won | lost
 
   const log = useCallback((m) => setMsgs(p => [m, ...p].slice(0,12)), []);
 
   // ── Cell Click Handler ─────────────────────────────────────────────────────
   const handleClick = useCallback((r, c) => {
-    if (status !== "playing") return;
     const cell = grid[r][c];
 
     // ── HARVEST ──────────────────────────────────────────────────────────────
@@ -415,11 +413,10 @@ export default function FarmGame() {
       }
       return;
     }
-  }, [grid, gold, ap, wood, rock, mode, crop, build, reward, rewUsed, status, log]);
+  }, [grid, gold, ap, wood, rock, mode, crop, build, reward, rewUsed, log]);
 
   // ── Next Day ──────────────────────────────────────────────────────────────
   const nextDay = useCallback(() => {
-    if (status !== "playing") return;
     const { grid:ng, earned, msgs:dm } = processDay(grid);
     const newGold = gold + earned;
     const newDay  = day + 1;
@@ -434,22 +431,30 @@ export default function FarmGame() {
     setRewardOptions(options);
     setReward(null);
     setRewUsed(false);
+
+    // Double the milestone if reached
+    setGoal(prev => {
+      if (finalGold >= prev) {
+        const next = prev * 2;
+        setMsgs(p => [`🎉 Milestone ${prev}g reached! New target: ${next}g!`, ...p].slice(0,12));
+        return next;
+      }
+      return prev;
+    });
+
     setMsgs(prev => [
       `🌅 Day ${newDay} — passive income +${earned}g`,
       ...dm,
       ...prev,
     ].slice(0,12));
-
-    if (finalGold >= GOAL) { setStatus("won"); return; }
-    if (newDay > MAX_DAY)  { setStatus("lost"); }
-  }, [grid, gold, day, status]);
+  }, [grid, gold, day, goal]);
 
   // ── Restart ───────────────────────────────────────────────────────────────
   const restart = () => {
     setGrid(initGrid()); setGold(START_G); setAP(MAX_AP); setDay(1);
-    setWood(0); setRock(0); setMode("till"); setCrop("mint"); setBuild("water");
-    setReward(null); setRewUsed(false); setStatus("playing");
-    setMsgs(["🌿 New game! Till land, plant crops, and reach 5000g in 30 days."]);
+    setWood(0); setRock(0); setGoal(GOAL); setMode("till"); setCrop("mint"); setBuild("water");
+    setReward(null); setRewUsed(false);
+    setMsgs(["🌿 New game! Till land, plant crops, and reach the milestone!"]);
   };
 
   // ── Hover Tooltip ─────────────────────────────────────────────────────────
@@ -476,9 +481,6 @@ export default function FarmGame() {
     return "⬛ Empty land — unlock via reward or clearing obstacles";
   })() : null;
 
-  // ── Derived ───────────────────────────────────────────────────────────────
-  const pct = Math.min(100, (gold/GOAL)*100);
-
   const MODES = [
     { id:"till",    label:"⛏ Till",    col:"#78350f", hi:"#fbbf24" },
     { id:"plant",   label:"🌱 Plant",   col:"#14532d", hi:"#22c55e" },
@@ -497,46 +499,23 @@ export default function FarmGame() {
       userSelect:"none",
     }}>
 
-      {/* ── Win / Lose overlay ── */}
-      {status !== "playing" && (
-        <div style={{
-          position:"fixed",inset:0,background:"#000000e0",zIndex:100,
-          display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:14,
-        }}>
-          <div style={{fontSize:80}}>{status==="won"?"🏆":"💀"}</div>
-          <div style={{fontSize:34,color:status==="won"?"#fbbf24":"#ef4444"}}>
-            {status==="won"?"Victory!":"Farm Bankrupt"}
-          </div>
-          <div style={{color:"#a8a29e",fontSize:14,textAlign:"center",maxWidth:340}}>
-            {status==="won"
-              ? `You reached ${GOAL}g on Day ${day}! Outstanding farmer!`
-              : `Day ${MAX_DAY} passed. Final gold: ${gold}g — needed ${GOAL}g.`}
-          </div>
-          <button onClick={restart} style={{
-            marginTop:8,background:"#1c1917",border:"2px solid #fbbf24",
-            borderRadius:8,padding:"10px 28px",color:"#fbbf24",
-            fontFamily:"inherit",fontSize:15,cursor:"pointer",letterSpacing:1,
-          }}>Play Again</button>
-        </div>
-      )}
-
       {/* ── Title ── */}
       <div style={{textAlign:"center",marginBottom:10}}>
         <div style={{fontSize:9,letterSpacing:4,textTransform:"uppercase",color:"#57534e",marginBottom:3}}>Turn-Based Farm Sim</div>
         <h1 style={{margin:0,fontSize:21,fontWeight:400,letterSpacing:1,textShadow:"0 0 24px #16a34a33"}}>
-          🌿 Mint Farm — Day {day} / {MAX_DAY}
+          🌿 Mint Farm — Day {day}
         </h1>
       </div>
 
       {/* ── Stat Cards ── */}
       <div style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap",marginBottom:8}}>
         {[
-          { l:"Day",  v:`${day}/${MAX_DAY}`, c:"#fbbf24" },
+          { l:"Day",  v:`${day}`, c:"#fbbf24" },
           { l:"Gold", v:`${gold}g`,          c:"#fde68a" },
           { l:"AP",   v:`${ap}/${MAX_AP}`,   c:ap>3?"#86efac":"#f87171" },
           { l:"Wood 🪵", v:wood,             c:"#a3e635" },
           { l:"Rock 🪨", v:rock,             c:"#a8a29e" },
-          { l:"Goal", v:`${GOAL}g`,           c:"#c4b5fd" },
+          { l:"Milestone", v:`${goal}g`,           c:"#c4b5fd" },
         ].map(s => (
           <div key={s.l} style={{
             background:"#1c1917",border:`1px solid ${s.c}33`,
@@ -549,8 +528,10 @@ export default function FarmGame() {
       </div>
 
       {/* ── Goal Progress Bar ── */}
-      <div style={{maxWidth:540,margin:"0 auto 8px",background:"#1c1917",borderRadius:5,height:7,border:"1px solid #292524",overflow:"hidden"}}>
-        <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#22c55e,#fbbf24)",borderRadius:5,transition:"width 0.5s"}}/>
+      <div style={{maxWidth:540,margin:"0 auto 8px"}}>
+        <div style={{background:"#1c1917",borderRadius:5,height:7,border:"1px solid #292524",overflow:"hidden"}}>
+          <div style={{height:"100%",width:`${Math.min(100,(gold/goal)*100)}%`,background:"linear-gradient(90deg,#22c55e,#fbbf24)",borderRadius:5,transition:"width 0.5s"}}/>
+        </div>
       </div>
 
       {/* ── Mode Buttons ── */}
@@ -749,7 +730,7 @@ export default function FarmGame() {
           Mine 🪨 rocks &amp; chop 🌲 trees (Harvest mode) to earn resources for buildings.<br/>
           <span style={{color:"#a3e635"}}>🪵 Wood</span>: Trap, Keg, Beehive, Tea, Tree &nbsp;|&nbsp; <span style={{color:"#a8a29e"}}>🪨 Rock</span>: Water Tower, Growth Tower, Trap Doubler<br/>
           Each action costs 1 AP. Press <span style={{color:"#93c5fd"}}>⏭ Next Day</span> to grow crops &amp; collect passive income.<br/>
-          <span style={{color:"#fb923c"}}>🎁 Daily reward</span>: choose from 3 options each morning (free!). Goal: <span style={{color:"#c4b5fd"}}>{GOAL}g</span> in {MAX_DAY} days!
+          <span style={{color:"#fb923c"}}>🎁 Daily reward</span>: choose from 3 options each morning (free!). Hit the milestone to double it — farm forever!
         </div>
       </div>
     </div>
