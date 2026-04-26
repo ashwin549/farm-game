@@ -15,21 +15,22 @@ const CROPS = {
   cabbage: { label:"Cabbage", icon:"🥬", time:3, profit:350, cost:20  },
 };
 
+// cost: gold cost. woodCost/rockCost: resource costs (optional)
 const STRUCTS = {
-  farmland:     {label:"Farmland",       icon:"🟫", cost:100, desc:"Unlock this tile for farming"},
-  water:        { label:"Water Tower",   icon:"💧", cost:300, desc:"Auto-waters 8 neighbors each day" },
-  growth:       { label:"Growth Tower",  icon:"⚡", cost:250, desc:"+1 extra growth/day for 8 neighbors" },
-  beehive:      { label:"Beehive",       icon:"🍯", cost:500, desc:"+250g passively each day" },
-  tree:         { label:"Fruit Tree",    icon:"🌳", cost:150, desc:"Harvest: +100g — no water needed (1 AP)" },
-  tea:          { label:"Tea Leaves",    icon:"🍵", cost:200, desc:"Harvest: +350g — needs Water Tower (1 AP)" },
-  keg:          { label:"Keg",           icon:"🪣", cost:300, desc:"2× profit from Beehive, Tree & Tea nearby" },
-  actionflower: { label:"Action Flower", icon:"🌸", cost:200, desc:"Blooms in 4 days — click to restore all AP (free)" },
-  trapdoubler:  { label:"Trap Doubler",  icon:"✳️", cost:350, desc:"1.5× Bird Trap rewards for traps nearby" },
-  plantdoubler: { label:"Plant Doubler", icon:"🌟", cost:350, desc:"1.5× harvest profit for nearby crops" },
-  trap:         { label:"Bird Trap",     icon:"🪤", cost:150, desc:"Daily: eats 1 ripe adjacent crop → +750g" },
+  farmland:     { label:"Farmland",       icon:"🟫", cost:100, desc:"Unlock this tile for farming" },
+  water:        { label:"Water Tower",    icon:"💧", cost:150, rockCost:2, desc:"Auto-waters 8 neighbors each day — 150g + 2🪨" },
+  growth:       { label:"Growth Tower",   icon:"⚡", cost:100, rockCost:1, desc:"+1 extra growth/day for 8 neighbors — 100g + 1🪨" },
+  beehive:      { label:"Beehive",        icon:"🍯", cost:300, woodCost:2, desc:"+250g passively each day — 300g + 2🪵" },
+  tree:         { label:"Fruit Tree",     icon:"🌳", cost:0,   woodCost:1, desc:"Harvest: +100g — no water needed (1 AP) — 1🪵" },
+  tea:          { label:"Tea Leaves",     icon:"🍵", cost:100, woodCost:1, desc:"Harvest: +350g — needs Water Tower (1 AP) — 100g + 1🪵" },
+  keg:          { label:"Keg",            icon:"🪣", cost:100, woodCost:2, desc:"2× profit from Beehive, Tree & Tea nearby — 100g + 2🪵" },
+  actionflower: { label:"Action Flower",  icon:"🌸", cost:200, desc:"Blooms in 4 days — click to restore all AP (free) — 200g" },
+  trapdoubler:  { label:"Trap Doubler",   icon:"✳️", cost:200, rockCost:1, desc:"1.5× Bird Trap rewards for traps nearby — 200g + 1🪨" },
+  plantdoubler: { label:"Plant Doubler",  icon:"🌟", cost:250, desc:"1.5× harvest profit for nearby crops — 250g" },
+  trap:         { label:"Bird Trap",      icon:"🪤", cost:50,  woodCost:1, desc:"Daily: eats 1 ripe adjacent crop → +750g — 50g + 1🪵" },
   // natural (not purchasable)
-  rock:         { label:"Rock",          icon:"🪨", cost:0,   desc:"Mine: +1 rock, tile → farmland (1 AP)" },
-  bigtree:      { label:"Wild Tree",     icon:"🌲", cost:0,   desc:"Chop: +1 wood, tile → farmland (1 AP)" },
+  rock:         { label:"Rock",           icon:"🪨", cost:0,   desc:"Mine: +1 rock, tile → farmland (1 AP)" },
+  bigtree:      { label:"Wild Tree",      icon:"🌲", cost:0,   desc:"Chop: +1 wood, tile → farmland (1 AP)" },
 };
 
 const BUILDABLE = ["farmland","water","growth","beehive","tree","tea","keg","actionflower","trapdoubler","plantdoubler","trap"];
@@ -59,20 +60,20 @@ function deepClone(g) {
 
 function initGrid() {
   const g = Array.from({length:G}, () => Array.from({length:G}, () => mkCell()));
-  [[2,2],[2,7],[7,2],[7,7],[5,5]].forEach(([r,c]) => {g[r][c].structure = { type:"farmland", tilled:false };});
-  [[1,1],[8,8],[0,5],[9,4]].forEach(([r,c]) => { g[r][c].structure = {type:"rock"}; });
-  [[1,8],[8,1],[2,0],[7,9]].forEach(([r,c]) => { g[r][c].structure = {type:"bigtree"}; });
+  [[2,2],[2,7],[7,2],[7,7],[5,5]].forEach(([r,c]) => { g[r][c].structure = { type:"farmland", tilled:false }; });
+  [[1,1],[8,8],[0,5],[9,4]].forEach(([r,c])        => { g[r][c].structure = { type:"rock" }; });
+  [[1,8],[8,1],[2,0],[7,9]].forEach(([r,c])         => { g[r][c].structure = { type:"bigtree" }; });
   return g;
 }
 
 // ── Daily Reward Pool ─────────────────────────────────────────────────────────
 const POOL = [
-  {type:"structure", value:"rock"},{type:"structure", value:"bigtree"},
-  {type:"structure",value:"water"}, {type:"structure",value:"growth"},
-  {type:"structure",value:"beehive"}, {type:"structure",value:"tree"},
-  {type:"structure",value:"tea"}, {type:"structure",value:"trap"},
-  {type:"structure",value:"actionflower"}, {type:"structure",value:"plantdoubler"},
-  {type:"structure",value:"trapdoubler"},
+  {type:"structure", value:"rock"}, {type:"structure", value:"bigtree"},
+  {type:"structure", value:"water"}, {type:"structure", value:"growth"},
+  {type:"structure", value:"beehive"}, {type:"structure", value:"tree"},
+  {type:"structure", value:"tea"}, {type:"structure", value:"trap"},
+  {type:"structure", value:"actionflower"}, {type:"structure", value:"plantdoubler"},
+  {type:"structure", value:"trapdoubler"},
   {type:"farmland"}, {type:"farmland"},
 ];
 const randReward = () => POOL[Math.floor(Math.random()*POOL.length)];
@@ -98,7 +99,7 @@ function processDay(grid) {
     if (!cell.crop || cell.crop.growthLeft === 0) continue;
     const wet = cell.crop.watered || hasNS(g,r,c,"water");
     if (!wet) { cell.crop.watered = false; continue; }
-    const bonus   = hasNS(g,r,c,"growth") ? 1 : 0;
+    const bonus = hasNS(g,r,c,"growth") ? 1 : 0;
     cell.crop.growthLeft = Math.max(0, cell.crop.growthLeft - (1+bonus));
     cell.crop.watered    = hasNS(g,r,c,"water"); // keep watered only if tower adjacent
   }
@@ -119,7 +120,6 @@ function processDay(grid) {
     const [cr,cc] = ready[Math.floor(Math.random()*ready.length)];
     if (g[cr][cc].crop) {
       g[cr][cc].crop = null;
-
       if (g[cr][cc].structure?.type === "farmland") {
         g[cr][cc].structure.tilled = false;
       }
@@ -128,7 +128,8 @@ function processDay(grid) {
     earned += amt;
     msgs.push(`🪤 Bird trap fired! +${amt}g${hasNS(g,r,c,"trapdoubler")?" (Trap Doubler!)":""}`);
   }
-  //5. Reset daily harvest structures
+
+  // 5. Reset daily harvest structures
   for (let r=0; r<G; r++) for (let c=0; c<G; c++) {
     const s = g[r][c].structure;
     if (s?.type === "tea") {
@@ -156,10 +157,9 @@ const SS = {
 };
 
 function cellVis(cell, r, c, grid) {
-  const { type, crop, structure:s } = cell;
-  console.log("cell", r, c, cell.tilled, cell);
-  if (s && s.type !== "farmland") {
+  const { crop, structure:s } = cell;
 
+  if (s && s.type !== "farmland") {
     if (s.type === "actionflower") {
       const bl  = s.bloomLeft ?? 4;
       const rdy = bl === 0;
@@ -179,63 +179,70 @@ function cellVis(cell, r, c, grid) {
     let   sc  = "#6b7280";
 
     if (s.type === "tea") {
-      const wet = hasNS(grid,r,c,"water");
+      const wet  = hasNS(grid,r,c,"water");
       const used = s.harvestedToday;
-
       sub = !wet ? "dry!" : used ? "done" : "ready";
       sc  = !wet ? "#f87171" : used ? "#6b7280" : "#10b981";
     }
 
-    return {
-      icon: STRUCTS[s.type]?.icon || "?",
-      bg: st.bg,
-      border: st.border,
-      glow: st.glow,
-      sub,
-      subCol: sc,
-      dim: false
-    };
+    return { icon:STRUCTS[s.type]?.icon||"?", bg:st.bg, border:st.border, glow:st.glow, sub, subCol:sc, dim:false };
   }
 
   if (cell.structure?.type === "farmland" && crop) {
-    const def  = CROPS[crop.type];
-    const rdy  = crop.growthLeft === 0;
-    const wet  = crop.watered || hasNS(grid,r,c,"water");
+    const def = CROPS[crop.type];
+    const rdy = crop.growthLeft === 0;
+    const wet = crop.watered || hasNS(grid,r,c,"water");
     if (rdy) return { icon:def.icon, bg:"#0d3321", border:"#22c55e", glow:"0 0 10px #22c55e77", sub:"READY", subCol:"#4ade80", dim:false };
     if (wet) return { icon:def.icon, bg:"#143222", border:"#166534", glow:"none", sub:`${crop.growthLeft}d`, subCol:"#6b7280", dim:false };
-    return     { icon:def.icon, bg:"#2a1500", border:"#92400e", glow:"none", sub:"DRY!", subCol:"#f87171", dim:true };
+    return           { icon:def.icon, bg:"#2a1500", border:"#92400e", glow:"none", sub:"DRY!", subCol:"#f87171", dim:true };
   }
 
-  if (cell.structure?.type === "farmland") return { icon: "", bg:cell.structure?.tilled ?"#844b13":"#1a0f05", border:cell.structure?.tilled ?"#e87b0d":"#44403c", glow:"none", sub:"", dim:false };
+  if (cell.structure?.type === "farmland") {
+    const tilled = cell.structure?.tilled;
+    return { icon:"", bg:tilled?"#844b13":"#1a0f05", border:tilled?"#e87b0d":"#44403c", glow:"none", sub:"", dim:false };
+  }
 
   return { icon:"", bg:"#0c0a09", border:"#1c1917", glow:"none", sub:"", dim:false };
 }
 
+// ── Cost helpers ──────────────────────────────────────────────────────────────
+function canAfford(def, gold, wood, rock) {
+  return gold >= (def.cost||0) && wood >= (def.woodCost||0) && rock >= (def.rockCost||0);
+}
+
+function costLabel(def) {
+  const parts = [];
+  if (def.cost)      parts.push(`${def.cost}g`);
+  if (def.woodCost)  parts.push(`${def.woodCost}🪵`);
+  if (def.rockCost)  parts.push(`${def.rockCost}🪨`);
+  return parts.join(" + ") || "Free";
+}
+
 // ── Main Game Component ───────────────────────────────────────────────────────
 export default function FarmGame() {
-  const [grid,    setGrid]    = useState(initGrid);
-  const [gold,    setGold]    = useState(START_G);
-  const [ap,      setAP]      = useState(MAX_AP);
-  const [day,     setDay]     = useState(1);
-  const [wood,    setWood]    = useState(0);
-  const [rock,    setRock]    = useState(0);
-  const [mode,    setMode]    = useState("till");
-  const [crop,    setCrop]    = useState("mint");
-  const [build,   setBuild]   = useState("water");
-  const [reward,  setReward]  = useState(null);
-  const [rewardOptions, setRewardOptions] = useState(null);
-  const [rewUsed, setRewUsed] = useState(false);
-  const [msgs,    setMsgs]    = useState(["🌿 Welcome! Till land → Plant seeds → Water → Harvest. Press Next Day to advance."]);
-  const [hovered, setHovered] = useState(null);
-  const [status,  setStatus]  = useState("playing"); // playing | won | lost
+  const [grid,          setGrid]         = useState(initGrid);
+  const [gold,          setGold]         = useState(START_G);
+  const [ap,            setAP]           = useState(MAX_AP);
+  const [day,           setDay]          = useState(1);
+  const [wood,          setWood]         = useState(0);
+  const [rock,          setRock]         = useState(0);
+  const [mode,          setMode]         = useState("till");
+  const [crop,          setCrop]         = useState("mint");
+  const [build,         setBuild]        = useState("water");
+  const [reward,        setReward]       = useState(null);
+  const [rewardOptions, setRewardOptions]= useState(null);
+  const [rewUsed,       setRewUsed]      = useState(false);
+  const [msgs,          setMsgs]         = useState(["🌿 Welcome! Till land → Plant seeds → Water → Harvest. Press Next Day to advance."]);
+  const [hovered,       setHovered]      = useState(null);
+  const [status,        setStatus]       = useState("playing"); // playing | won | lost
 
   const log = useCallback((m) => setMsgs(p => [m, ...p].slice(0,12)), []);
 
-  // ── Cell Click Handler ────────────────────────────────────────────────────
+  // ── Cell Click Handler ─────────────────────────────────────────────────────
   const handleClick = useCallback((r, c) => {
     if (status !== "playing") return;
     const cell = grid[r][c];
-    
+
     // ── HARVEST ──────────────────────────────────────────────────────────────
     if (mode === "harvest") {
       // Action Flower — free, no AP
@@ -251,21 +258,19 @@ export default function FarmGame() {
 
       // Ripe crop
       if (cell.crop?.growthLeft === 0) {
-        const def = CROPS[cell.crop.type];
-        const pd  = hasNS(grid,r,c,"plantdoubler");
+        const def  = CROPS[cell.crop.type];
+        const pd   = hasNS(grid,r,c,"plantdoubler");
         const gain = Math.floor(def.profit * (pd ? 1.5 : 1));
         const ng   = deepClone(grid);
         ng[r][c].crop = null;
-        if (ng[r][c].structure?.type === "farmland") {
-          ng[r][c].structure.tilled = false;
-        }
+        if (ng[r][c].structure?.type === "farmland") ng[r][c].structure.tilled = false;
         setGrid(ng); setGold(p=>p+gain); setAP(p=>p-1);
         log(`${def.icon} Harvested ${def.label} → +${gain}g${pd?" 🌟×1.5":""}`);
         return;
       }
       // Fruit tree
       if (cell.structure?.type === "tree") {
-        const keg = hasNS(grid,r,c,"keg");
+        const keg  = hasNS(grid,r,c,"keg");
         const gain = 100 * (keg ? 2 : 1);
         setGold(p=>p+gain); setAP(p=>p-1);
         log(`🌳 Fruit Tree → +${gain}g${keg?" 🪣×2":""}`);
@@ -273,26 +278,13 @@ export default function FarmGame() {
       }
       // Tea
       if (cell.structure?.type === "tea") {
-        if (!hasNS(grid,r,c,"water")) {
-          log("🍵 Tea needs a Water Tower nearby!");
-          return;
-        }
-
-        if (cell.structure.harvestedToday) {
-          log("🍵 Already harvested today.");
-          return;
-        }
-
+        if (!hasNS(grid,r,c,"water")) { log("🍵 Tea needs a Water Tower nearby!"); return; }
+        if (cell.structure.harvestedToday) { log("🍵 Already harvested today."); return; }
         const keg  = hasNS(grid,r,c,"keg");
         const gain = 350 * (keg ? 2 : 1);
-
-        const ng = deepClone(grid);
+        const ng   = deepClone(grid);
         ng[r][c].structure.harvestedToday = true;
-
-        setGrid(ng);
-        setGold(p=>p+gain);
-        setAP(p=>p-1);
-
+        setGrid(ng); setGold(p=>p+gain); setAP(p=>p-1);
         log(`🍵 Tea Leaves → +${gain}g${keg?" 🪣×2":""}`);
         return;
       }
@@ -316,31 +308,15 @@ export default function FarmGame() {
       return;
     }
 
-    // ── TILL ──────────────────────────────────────────────────────────────────
+    // ── TILL ─────────────────────────────────────────────────────────────────
     if (mode === "till") {
       if (ap <= 0) { log("❌ No AP left!"); return; }
-
-      if (cell.structure?.type !== "farmland") {
-        log("❌ Can only till farmland.");
-        return;
-      }
-
-      if (cell.crop) {
-        log("❌ Remove crop before tilling.");
-        return;
-      }
-
-      if (cell.structure.tilled) {
-        log("ℹ️ Already tilled.");
-        return;
-      }
-
+      if (cell.structure?.type !== "farmland") { log("❌ Can only till farmland."); return; }
+      if (cell.crop)              { log("❌ Remove crop before tilling."); return; }
+      if (cell.structure.tilled)  { log("ℹ️ Already tilled."); return; }
       const ng = deepClone(grid);
       ng[r][c].structure.tilled = true;
-
-      setGrid(ng);
-      setAP(p=>p-1);
-
+      setGrid(ng); setAP(p=>p-1);
       log("⛏ Land tilled.");
       return;
     }
@@ -348,9 +324,11 @@ export default function FarmGame() {
     // ── PLANT ─────────────────────────────────────────────────────────────────
     if (mode === "plant") {
       if (ap <= 0) { log("❌ No AP left!"); return; }
-      if (cell.structure?.type !== "farmland" || !cell.structure.tilled || cell.crop) { log("❌ Plant on empty farmland only."); return; }
+      if (cell.structure?.type !== "farmland" || !cell.structure.tilled || cell.crop) {
+        log("❌ Plant on tilled farmland only."); return;
+      }
       const def = CROPS[crop];
-      if (gold < def.cost) { log(`❌ Need ${def.cost}g for ${def.label} seeds. Current: ${gold}g`); return; }
+      if (gold < def.cost) { log(`❌ Need ${def.cost}g for ${def.label} seeds. Have ${gold}g.`); return; }
       const ng = deepClone(grid);
       ng[r][c].crop = { type:crop, growthLeft:def.time, watered:false };
       setGrid(ng); setGold(p=>p-def.cost); setAP(p=>p-1);
@@ -372,35 +350,44 @@ export default function FarmGame() {
 
     // ── BUILD ─────────────────────────────────────────────────────────────────
     if (mode === "build") {
+      // Special case: farmland expands to any empty tile
       if (build === "farmland") {
-        if (cell.structure) {
-          log("❌ Tile already has something.");
-          return;
-        }
-
-        if (gold < 100) {
-          log("❌ Need 100g to buy farmland.");
-          return;
-        }
-
+        if (cell.structure) { log("❌ Tile already has something."); return; }
+        if (gold < 100) { log("❌ Need 100g to buy farmland."); return; }
         const ng = deepClone(grid);
         ng[r][c].structure = { type:"farmland", tilled:false };
-
-        setGrid(ng);
-        setGold(p=>p-100);
-
+        setGrid(ng); setGold(p=>p-100);
         log("🟫 Farmland purchased!");
         return;
       }
-      if (cell.structure) { log("❌ Tile already has a structure. Harvest it first."); return; }
-      if (cell.crop)      { log("❌ Tile has a crop. Harvest it first."); return; }
+
+      if (cell.structure) { log("❌ Tile already has a structure."); return; }
+      if (cell.crop)      { log("❌ Remove crop first."); return; }
       const def = STRUCTS[build];
       if (!def || !BUILDABLE.includes(build)) { log("❌ Select a buildable structure."); return; }
-      if (gold < def.cost) { log(`❌ Need ${def.cost}g to build ${def.label}. Have ${gold}g.`); return; }
+
+      // Check all resource costs
+      if (gold < (def.cost||0)) {
+        log(`❌ Need ${def.cost}g to build ${def.label}. Have ${gold}g.`); return;
+      }
+      if ((def.woodCost||0) > 0 && wood < def.woodCost) {
+        log(`❌ Need ${def.woodCost}🪵 wood to build ${def.label}. Have ${wood}.`); return;
+      }
+      if ((def.rockCost||0) > 0 && rock < def.rockCost) {
+        log(`❌ Need ${def.rockCost}🪨 rock to build ${def.label}. Have ${rock}.`); return;
+      }
+
       const ng = deepClone(grid);
-      ng[r][c].structure = { type:build, ...(build==="actionflower" ? {bloomLeft:4} : {}) };
-      setGrid(ng); setGold(p=>p-def.cost);
-      log(`🏗 Built ${def.icon} ${def.label} for ${def.cost}g.`);
+      ng[r][c].structure = {
+        type: build,
+        ...(build==="actionflower" ? {bloomLeft:4} : {}),
+        ...(build==="tea" ? {harvestedToday:false} : {}),
+      };
+      setGrid(ng);
+      setGold(p => p - (def.cost||0));
+      if (def.woodCost) setWood(p => p - def.woodCost);
+      if (def.rockCost) setRock(p => p - def.rockCost);
+      log(`🏗 Built ${def.icon} ${def.label} for ${costLabel(def)}.`);
       return;
     }
 
@@ -408,7 +395,7 @@ export default function FarmGame() {
     if (mode === "reward") {
       if (!reward || rewUsed) { log("❌ No unused daily reward."); return; }
       if (reward.type === "farmland") {
-        if (cell.unlocked || cell.structure) { log("❌ Place farmland on empty tile."); return; }
+        if (cell.structure) { log("❌ Place farmland on empty tile."); return; }
         const ng = deepClone(grid);
         ng[r][c].structure = { type:"farmland", tilled:false };
         setGrid(ng); setRewUsed(true); setMode("plant");
@@ -421,14 +408,14 @@ export default function FarmGame() {
         ng[r][c].structure = {
           type: stype,
           ...(stype==="actionflower" ? {bloomLeft:4} : {}),
-          ...(stype==="tea" ? { harvestedToday:false } : {})
+          ...(stype==="tea" ? {harvestedToday:false} : {}),
         };
         setGrid(ng); setRewUsed(true); setMode("build");
         log(`🎁 Placed free ${STRUCTS[stype]?.icon} ${STRUCTS[stype]?.label}!`);
       }
       return;
     }
-  }, [grid, gold, ap, mode, crop, build, reward, rewUsed, status, log]);
+  }, [grid, gold, ap, wood, rock, mode, crop, build, reward, rewUsed, status, log]);
 
   // ── Next Day ──────────────────────────────────────────────────────────────
   const nextDay = useCallback(() => {
@@ -437,9 +424,7 @@ export default function FarmGame() {
     const newGold = gold + earned;
     const newDay  = day + 1;
 
-    // Roll reward; auto-claim gold rewards
-    const options = Array.from({ length: 3 }, () => randReward());
-    //the finalgold is diff in case we want to add a gold reward that is auto-claimed later
+    const options   = Array.from({ length: 3 }, () => randReward());
     const finalGold = newGold;
 
     setGrid(ng);
@@ -470,10 +455,15 @@ export default function FarmGame() {
   // ── Hover Tooltip ─────────────────────────────────────────────────────────
   const hoverTip = hovered ? (() => {
     const [r,c] = hovered;
-    const { type, crop:cr, structure:s } = grid[r][c];
+    const { crop:cr, structure:s } = grid[r][c];
     if (s) {
       const def = STRUCTS[s.type];
       if (s.type === "actionflower") return `🌸 Action Flower — ${(s.bloomLeft??4)===0?"BLOOMED! Click (harvest) to restore AP":`${s.bloomLeft??4} days to bloom`}`;
+      if (s.type === "tea") {
+        const wet  = hasNS(grid,r,c,"water");
+        const used = s.harvestedToday;
+        return `🍵 Tea — ${!wet?"Needs water tower nearby!":used?"Already harvested today":"Ready to harvest! (Harvest mode)"}`;
+      }
       return `${def?.icon||"?"} ${def?.label||s.type} — ${def?.desc||""}`;
     }
     if (cr) {
@@ -482,7 +472,7 @@ export default function FarmGame() {
       if (cr.growthLeft===0) return `${def.icon} ${def.label} — ✅ READY to harvest! (+${def.profit}g)`;
       return `${def.icon} ${def.label} — ${wet?`${cr.growthLeft} day(s) left`:"❌ DRY — needs water or Water Tower"}`;
     }
-    if (grid[r][c].structure?.type === "farmland") return "🟫 Empty farmland — switch to Plant mode to sow seeds";
+    if (grid[r][c].structure?.type === "farmland") return "🟫 Farmland — Till it (⛏) then Plant seeds (🌱)";
     return "⬛ Empty land — unlock via reward or clearing obstacles";
   })() : null;
 
@@ -544,8 +534,8 @@ export default function FarmGame() {
           { l:"Day",  v:`${day}/${MAX_DAY}`, c:"#fbbf24" },
           { l:"Gold", v:`${gold}g`,          c:"#fde68a" },
           { l:"AP",   v:`${ap}/${MAX_AP}`,   c:ap>3?"#86efac":"#f87171" },
-          { l:"Wood", v:wood,                 c:"#a3e635" },
-          { l:"Rock", v:rock,                 c:"#a8a29e" },
+          { l:"Wood 🪵", v:wood,             c:"#a3e635" },
+          { l:"Rock 🪨", v:rock,             c:"#a8a29e" },
           { l:"Goal", v:`${GOAL}g`,           c:"#c4b5fd" },
         ].map(s => (
           <div key={s.l} style={{
@@ -576,7 +566,7 @@ export default function FarmGame() {
             transition:"all 0.12s",
           }}>{m.label}</button>
         ))}
-        {/* Reward mode button — only when reward exists */}
+        {/* Reward mode button — only when reward options pending */}
         {rewardOptions && !rewUsed && (
           <button onClick={()=>setMode("reward")} style={{
             background:mode==="reward"?"#7c2d1288":"#1c1917",
@@ -615,10 +605,10 @@ export default function FarmGame() {
 
       {/* ── Build sub-panel ── */}
       {mode === "build" && (
-        <div style={{display:"flex",gap:4,justifyContent:"center",flexWrap:"wrap",maxWidth:640,margin:"0 auto 8px"}}>
+        <div style={{display:"flex",gap:4,justifyContent:"center",flexWrap:"wrap",maxWidth:700,margin:"0 auto 8px"}}>
           {BUILDABLE.map(k => {
             const v   = STRUCTS[k];
-            const ok  = gold >= v.cost;
+            const ok  = canAfford(v, gold, wood, rock);
             const sel = build === k;
             return (
               <button key={k} onClick={()=>setBuild(k)} title={v.desc} style={{
@@ -630,7 +620,7 @@ export default function FarmGame() {
                 opacity:ok?1:0.55,transition:"all 0.1s",
               }}>
                 {v.icon} {v.label}
-                <span style={{display:"block",fontSize:8,color:ok?"#fbbf24":"#6b7280"}}>{v.cost}g</span>
+                <span style={{display:"block",fontSize:8,color:ok?"#fbbf24":"#6b7280"}}>{costLabel(v)}</span>
               </button>
             );
           })}
@@ -640,38 +630,26 @@ export default function FarmGame() {
       {/* ── Daily Reward Banner ── */}
       {rewardOptions && !rewUsed && (
         <div style={{textAlign:"center",marginBottom:8}}>
-          <div style={{marginBottom:6,fontSize:11,color:"#fbbf24"}}>
-            🎁 Choose ONE reward:
+          <div style={{marginBottom:6,fontSize:11,color:"#fbbf24"}}>🎁 Choose ONE reward:</div>
+          <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+            {rewardOptions.map((r, i) => (
+              <button
+                key={i}
+                onClick={() => { setReward(r); setRewardOptions(null); setMode("reward"); }}
+                style={{
+                  background:"#1c1917",border:"1px solid #44403c",
+                  borderRadius:8,padding:"8px 14px",cursor:"pointer",
+                  color:"#fef3c7",fontFamily:"inherit",fontSize:11,
+                }}
+              >
+                {r.type === "farmland"
+                  ? "🟫 Farmland"
+                  : `${STRUCTS[r.value]?.icon} ${STRUCTS[r.value]?.label}`}
+              </button>
+            ))}
           </div>
-
-        <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
-          {rewardOptions.map((r, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      setReward(r);
-                      setRewardOptions(null);
-                      setMode("reward");
-                    }}
-                    style={{
-                      background:"#1c1917",
-                      border:"1px solid #44403c",
-                      borderRadius:8,
-                      padding:"8px 14px",
-                      cursor:"pointer",
-                      color:"#fef3c7",
-                      fontFamily:"inherit",
-                      fontSize:11,
-                    }}
-                  >
-                    {r.type === "farmland"
-                      ? "🟫 Farmland"
-                      : `${STRUCTS[r.value]?.icon} ${STRUCTS[r.value]?.label}`}
-                  </button>
-                ))}
-              </div>
-            </div>
-        )}
+        </div>
+      )}
 
       {/* ── Grid ── */}
       <div style={{display:"flex",justifyContent:"center",marginBottom:6}}>
@@ -752,7 +730,7 @@ export default function FarmGame() {
           ["🟫","Farmland"],["🌿","Mint"],["🌾","Wheat"],["🥬","Cabbage"],
           ["💧","Water"],["⚡","Growth"],["🍯","Beehive"],["🌳","F.Tree"],
           ["🍵","Tea"],["🪣","Keg"],["🌸","A.Flower"],["🪤","Trap"],
-          ["✳️","Trap×"],["🌟","Plant×"],["🪨","Rock"],["🌲","Tree"],
+          ["✳️","Trap×"],["🌟","Plant×"],["🪨","Rock→🪵"],["🌲","Tree→🪵"],
         ].map(([ic,lb]) => (
           <div key={lb} style={{display:"flex",alignItems:"center",gap:2,fontSize:8,color:"#57534e"}}>
             <span style={{fontSize:10}}>{ic}</span>{lb}
@@ -764,12 +742,14 @@ export default function FarmGame() {
       <div style={{maxWidth:560,margin:"8px auto 0",background:"#1c1917",border:"1px solid #292524",borderRadius:8,padding:"7px 12px"}}>
         <div style={{fontSize:8,letterSpacing:2,textTransform:"uppercase",color:"#57534e",marginBottom:4}}>How To Play</div>
         <div style={{fontSize:9,color:"#6b7280",lineHeight:1.8,fontFamily:"monospace"}}>
-          1. <span style={{color:"#fbbf24"}}>⛏ Till</span> empty land → 
+          1. <span style={{color:"#fbbf24"}}>⛏ Till</span> farmland → 
           2. <span style={{color:"#22c55e"}}>🌱 Plant</span> seeds → 
           3. <span style={{color:"#60a5fa"}}>💧 Water</span> (or build Water Tower) → 
           4. <span style={{color:"#4ade80"}}>🌾 Harvest</span> when READY<br/>
+          Mine 🪨 rocks &amp; chop 🌲 trees (Harvest mode) to earn resources for buildings.<br/>
+          <span style={{color:"#a3e635"}}>🪵 Wood</span>: Trap, Keg, Beehive, Tea, Tree &nbsp;|&nbsp; <span style={{color:"#a8a29e"}}>🪨 Rock</span>: Water Tower, Growth Tower, Trap Doubler<br/>
           Each action costs 1 AP. Press <span style={{color:"#93c5fd"}}>⏭ Next Day</span> to grow crops &amp; collect passive income.<br/>
-          <span style={{color:"#fb923c"}}>🎁 Daily reward</span> is free — use Reward mode to place it. Goal: reach <span style={{color:"#c4b5fd"}}>{GOAL}g</span> in {MAX_DAY} days!
+          <span style={{color:"#fb923c"}}>🎁 Daily reward</span>: choose from 3 options each morning (free!). Goal: <span style={{color:"#c4b5fd"}}>{GOAL}g</span> in {MAX_DAY} days!
         </div>
       </div>
     </div>
