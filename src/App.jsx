@@ -413,6 +413,46 @@ export default function FarmGame() {
       }
       return;
     }
+
+    // ── SELL ─────────────────────────────────────────────────────────────────
+    if (mode === "sell") {
+      const s = cell.structure;
+      if (!s) { log("❌ Nothing to sell here."); return; }
+
+      // Can't sell natural obstacles this way (use harvest mode instead)
+      if (s.type === "rock" || s.type === "bigtree") {
+        log("❌ Mine rocks / chop trees in Harvest mode to clear them."); return;
+      }
+
+      // Can't sell if a crop is planted on it
+      if (cell.crop) {
+        log("❌ Harvest the crop first before selling this plot."); return;
+      }
+
+      const def = STRUCTS[s.type];
+      const refundGold = def.cost || 0;
+      const refundWood = def.woodCost || 0;
+      const refundRock = def.rockCost || 0;
+
+      const ng = deepClone(grid);
+      // Farmland reverts to empty; everything else also reverts to empty
+      ng[r][c].structure = null;
+      ng[r][c].crop = null;
+
+      setGrid(ng);
+      setGold(p => p + refundGold);
+      if (refundWood) setWood(p => p + refundWood);
+      if (refundRock) setRock(p => p + refundRock);
+
+      const refundStr = [
+        refundGold ? `${refundGold}g` : "",
+        refundWood ? `${refundWood}🪵` : "",
+        refundRock ? `${refundRock}🪨` : "",
+      ].filter(Boolean).join(" + ");
+
+      log(`💰 Sold ${def.icon} ${def.label} — got back ${refundStr || "nothing"}.`);
+      return;
+    }
   }, [grid, gold, ap, wood, rock, mode, crop, build, reward, rewUsed, log]);
 
   // ── Next Day ──────────────────────────────────────────────────────────────
@@ -469,6 +509,14 @@ export default function FarmGame() {
         const used = s.harvestedToday;
         return `🍵 Tea — ${!wet?"Needs water tower nearby!":used?"Already harvested today":"Ready to harvest! (Harvest mode)"}`;
       }
+      if (mode === "sell" && s.type !== "rock" && s.type !== "bigtree") {
+        const parts = [
+          def.cost     ? `${def.cost}g`     : "",
+          def.woodCost ? `${def.woodCost}🪵` : "",
+          def.rockCost ? `${def.rockCost}🪨` : "",
+        ].filter(Boolean).join(" + ");
+        return `${def?.icon} ${def?.label} — 💰 Sell for ${parts || "nothing"} back`;
+      }
       return `${def?.icon||"?"} ${def?.label||s.type} — ${def?.desc||""}`;
     }
     if (cr) {
@@ -477,7 +525,7 @@ export default function FarmGame() {
       if (cr.growthLeft===0) return `${def.icon} ${def.label} — ✅ READY to harvest! (+${def.profit}g)`;
       return `${def.icon} ${def.label} — ${wet?`${cr.growthLeft} day(s) left`:"❌ DRY — needs water or Water Tower"}`;
     }
-    if (grid[r][c].structure?.type === "farmland") return "🟫 Farmland — Till it (⛏) then Plant seeds (🌱)";
+    if (grid[r][c].structure?.type === "farmland") return "🟫 Farmland — Till it (⛏) then Plant seeds (🌱)" + (mode==="sell" ? " | 💰 Click to sell (100g back)" : "");
     return "⬛ Empty land — unlock via reward or clearing obstacles";
   })() : null;
 
@@ -487,6 +535,7 @@ export default function FarmGame() {
     { id:"water",   label:"💧 Water",   col:"#1e3a5f", hi:"#60a5fa" },
     { id:"harvest", label:"🌾 Harvest", col:"#1a3a1a", hi:"#4ade80" },
     { id:"build",   label:"🏗 Build",   col:"#2d1b69", hi:"#818cf8" },
+    { id:"sell",    label:"💰 Sell",    col:"#7f1d1d", hi:"#f87171" },
   ];
 
   return (
