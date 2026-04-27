@@ -5,7 +5,7 @@ const G       = 10;
 const MAX_AP  = 11;
 const START_G = 200;
 const GOAL    = 5000;
-const CS      = 50; // cell px
+const CS = Math.min(50, Math.floor((Math.min(typeof window !== "undefined" ? window.innerWidth : 600, 600) - 30) / G)); // cell px
 
 // ── Crop & Structure Data ─────────────────────────────────────────────────────
 const CROPS = {
